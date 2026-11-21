@@ -1,0 +1,43 @@
+{
+  "name": "pr-workflow",
+  "version": "0.2.1",
+  "description": "Rules for agents working on pull requests: habits for any PR the session opens, author grants in configured repos, and the maintainer-side intake in configured repos. A hook names the rules before the first gh call to a configured repo.",
+  "author": {
+    "name": "Matus Nemcik"
+  },
+  "dependencies": [
+    "independent-review"
+  ],
+  "userConfig": {
+    "author_repos": {
+      "type": "string",
+      "title": "Author repos",
+      "description": "Comma-separated owner/repo list where the author grants apply (approve without asking, update from the default branch without asking, the required review loop).",
+      "default": ""
+    },
+    "intake_repos": {
+      "type": "string",
+      "title": "Intake repos",
+      "description": "Comma-separated owner/repo list where you are the maintainer and the intake rules apply to PRs the session didn't open.",
+      "default": ""
+    },
+    "gate_status": {
+      "type": "string",
+      "title": "Gate status",
+      "description": "Name of the commit status the intake sets on a head the owner agreed to (empty: no gate status).",
+      "default": ""
+    },
+    "standing_merge": {
+      "type": "boolean",
+      "title": "Standing merge",
+      "description": "Whether the intake merges a ready PR without asking. Release PRs always need an explicit go-ahead.",
+      "default": false
+    },
+    "bot_logins": {
+      "type": "string",
+      "title": "Bot logins",
+      "description": "Comma-separated bot PR authors in API form (e.g. dependabot[bot]) whose PRs may get a clean update from the default branch from the maintainer side.",
+      "default": ""
+    }
+  }
+}

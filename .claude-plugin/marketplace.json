@@ -1,0 +1,34 @@
+{
+  "name": "mnemcik",
+  "version": "2.1.0",
+  "description": "Personal Claude Code plugin marketplace — custom skills and MCP plugins.",
+  "owner": {
+    "name": "Matus Nemcik"
+  },
+  "plugins": [
+    {
+      "name": "triage",
+      "source": "./plugins/triage",
+      "description": "Iteratively process a list of items one by one — PR review comments, code review findings, analysis results, Jira issues, or any batch of questions/decisions that need individual attention",
+      "version": "1.0.3"
+    },
+    {
+      "name": "independent-review",
+      "source": "./plugins/independent-review",
+      "description": "Independent, fresh-context review of a PR, branch, design, analysis or document: pinned version, read-only reviewers, every finding validated, coverage recorded, delta re-review until clean.",
+      "version": "0.3.1"
+    },
+    {
+      "name": "analysis",
+      "source": "./plugins/analysis",
+      "description": "Pick up one backlog item with a decision-ready analysis: validated problem, cited evidence, one recommendation with alternatives, an independent review, every open decision listed. Never implements.",
+      "version": "0.3.1"
+    },
+    {
+      "name": "pr-workflow",
+      "source": "./plugins/pr-workflow",
+      "description": "Rules for agents working on pull requests: habits for any PR the session opens, author grants in configured repos, maintainer-side intake in configured repos, and a hook that names the rules before the first gh call to a configured repo.",
+      "version": "0.2.1"
+    }
+  ]
+}

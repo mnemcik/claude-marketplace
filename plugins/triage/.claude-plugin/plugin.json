@@ -1,0 +1,5 @@
+{
+  "name": "triage",
+  "version": "1.0.3",
+  "description": "Iteratively process a list of items one by one — PR review comments, code review findings, analysis results, Jira issues, or any batch of questions/decisions that need individual attention."
+}

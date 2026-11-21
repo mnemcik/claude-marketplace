@@ -1,0 +1,5 @@
+{
+  "name": "analysis",
+  "version": "0.3.1",
+  "description": "Pick up one backlog item with a decision-ready analysis: validated problem, cited evidence, one recommendation with credible alternatives, an independent review, and every open decision listed for the owner. Never implements."
+}

@@ -1,0 +1,140 @@
+#!/bin/bash
+# pr-watch — wake an intake session when anything changes on the open PRs of
+# the given repos. Part of the pr-workflow plugin (skill pr-workflow:pr-intake).
+#
+# Usage:
+#   pr-watch [--interval SECONDS] [--state-dir DIR] REPOS     wait for a change
+#   pr-watch [--state-dir DIR] --handled REPOS                mark the reported change handled
+# REPOS is a comma-separated owner/repo list.
+#
+# Waiting compares the open PRs against the last *handled* snapshot, not against
+# the moment it started, so nothing that happens between a wake and the restart
+# (or while no session runs) is lost. On a change it prints the difference,
+# remembers that snapshot as pending, and exits 0. Without --handled, a restart
+# reports the same change again. --handled promotes the pending snapshot (the one
+# that was reported) to handled, so a change that arrived after the report is
+# still reported on the next start.
+#
+# Only one watcher per repo set runs at a time (a lock in the state dir).
+#
+# Exit codes: 0 change reported / handled saved; 1 usage or state error,
+# or another watcher already running;
+# 3 PR_WATCH_MAX_POLLS reached without a change (tests only);
+# 4 five polls in a row failed (gh auth or network): the session should look.
+
+set -u
+export LC_ALL=C
+interval=120 state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/pr-workflow/watch" mode=wait repos=""
+need() { [ $# -ge 2 ] && [ -n "$2" ] && [ "${2#-}" = "$2" ] || { echo "pr-watch: $1 needs a value" >&2; exit 1; }; }
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --interval) need "$@"; interval=$2; shift 2 ;;
+    --state-dir) need "$@"; state_dir=$2; shift 2 ;;
+    --handled) mode=handled; shift ;;
+    -h|--help) sed -n '2,/^$/p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -*) echo "pr-watch: unknown option $1" >&2; exit 1 ;;
+    *) repos="$repos,$1"; shift ;;   # a list split by spaces is joined
+  esac
+done
+case "$interval" in ''|*[!0-9]*) echo "pr-watch: --interval needs seconds" >&2; exit 1 ;; esac
+if [ -z "${PR_WATCH_MAX_POLLS:-}" ] && [ "$interval" -lt 10 ]; then
+  echo "pr-watch: --interval must be at least 10 seconds (GitHub rate limit)" >&2; exit 1
+fi
+[ -n "$repos" ] && [ -n "$state_dir" ] || { echo "usage: pr-watch [--interval S] [--state-dir DIR] [--handled] owner/repo[,owner/repo…]" >&2; exit 1; }
+
+# Normalise the repo list: lower case, no spaces, sorted, unique.
+list=$(printf '%s' "$repos" | tr ',' '\n' | tr -d ' \t' | tr '[:upper:]' '[:lower:]' | grep -E '^[a-z0-9_.-]+/[a-z0-9_.-]+$' | sort -u)
+[ -n "$list" ] || { echo "pr-watch: no valid owner/repo in '$repos'" >&2; exit 1; }
+key=$(printf '%s' "$list" | tr '\n/' '+_')
+mkdir -p "$state_dir" || { echo "pr-watch: can't create $state_dir" >&2; exit 1; }
+handled="$state_dir/$key.handled"
+pending="$state_dir/$key.pending"
+
+# One line per open PR. Fails (non-zero) if any repo can't be read, so a failed
+# API call is never mistaken for "no open PRs".
+snap() {
+  local r owner name out
+  for r in $list; do
+    owner=${r%%/*}; name=${r#*/}
+    out=$(gh api graphql -F owner="$owner" -F name="$name" -f query='query($owner:String!,$name:String!){repository(owner:$owner,name:$name){pullRequests(states:OPEN,first:100,orderBy:{field:UPDATED_AT,direction:DESC}){nodes{number updatedAt headRefOid isDraft reviewDecision mergeStateStatus comments{totalCount} reviews{totalCount} commits(last:1){nodes{commit{statusCheckRollup{state}}}}}}}}' \
+      --jq '.data.repository.pullRequests.nodes[] | "\(.number) updated=\(.updatedAt) head=\(.headRefOid[0:7]) draft=\(.isDraft) review=\(.reviewDecision // "none") merge=\(.mergeStateStatus) ci=\(.commits.nodes[0].commit.statusCheckRollup.state // "none") comments=\(.comments.totalCount) reviews=\(.reviews.totalCount)"' 2>/dev/null) || return 1
+    if [ -n "$out" ]; then printf '%s\n' "$out" | sed "s#^#$r\##"; fi
+  done | sort
+  return "${PIPESTATUS[0]}"
+}
+
+save() { # $1 = snapshot, $2 = file
+  if [ -n "$1" ]; then printf '%s\n' "$1"; fi > "$2"
+}
+
+if [ "$mode" = handled ]; then
+  if [ -f "$pending" ]; then
+    mv -f "$pending" "$handled" || exit 1
+    echo "handled: $(grep -c . "$handled" | tr -d ' ') open PRs saved"
+  else
+    echo "nothing pending to mark handled"
+  fi
+  exit 0
+fi
+
+# One watcher per repo set: a lock directory holding the watcher's pid.
+# The lock is live while its pid runs pr-watch. A lock with no pid yet is
+# being taken by another start, unless it is older than a minute (a crash
+# between mkdir and writing the pid).
+lock_live() {
+  local other
+  other=$(cat "$lock/pid" 2>/dev/null)
+  if [ -z "$other" ]; then
+    [ -z "$(find "$lock" -maxdepth 0 -mmin +1 2>/dev/null)" ]
+    return
+  fi
+  kill -0 "$other" 2>/dev/null || return 1
+  local cmd
+  cmd=$(ps -p "$other" -o command= 2>/dev/null) || return 0   # no usable ps: trust kill -0
+  printf '%s' "$cmd" | grep -q 'pr-watch'
+}
+# Known limit: two starts that both find a stale lock at the same moment can
+# both take it; only reachable after a crash, and the skill runs one session.
+lock="$state_dir/$key.lock"
+if ! mkdir "$lock" 2>/dev/null; then
+  if lock_live; then
+    echo "pr-watch: a watcher for these repos is already running (pid $(cat "$lock/pid" 2>/dev/null || echo starting))" >&2; exit 1
+  fi
+  rm -rf "$lock"; mkdir "$lock" 2>/dev/null || { echo "pr-watch: a watcher for these repos is already running (lock just taken)" >&2; exit 1; }
+fi
+echo $$ > "$lock/pid"
+sleeper=""
+trap '[ -n "$sleeper" ] && kill "$sleeper" 2>/dev/null; rm -rf "$lock"' EXIT
+trap 'exit 1' INT TERM HUP
+
+polls=0
+failures=0
+first=1
+while :; do
+  if now=$(snap); then
+    failures=0
+    if [ ! -f "$handled" ]; then
+      save "$now" "$handled" || exit 1
+      echo "watching $(printf '%s' "$now" | grep -c . | tr -d ' ') open PRs in $(printf '%s\n' "$list" | paste -sd' ' -) (no earlier state) since $(date '+%H:%M')"
+    else
+      before=$(cat "$handled")
+      if [ "$now" != "$before" ]; then
+        save "$now" "$pending" || exit 1
+        echo "change at $(date '+%H:%M') (< handled, > now):"
+        diff <(printf '%s\n' "$before") <(printf '%s\n' "$now") | grep '^[<>]'
+        exit 0
+      fi
+      [ $first = 1 ] && echo "watching $(printf '%s' "$now" | grep -c . | tr -d ' ') open PRs in $(printf '%s\n' "$list" | paste -sd' ' -) since $(date '+%H:%M')"
+    fi
+  else
+    failures=$((failures + 1))
+    echo "poll failed at $(date '+%H:%M') ($failures in a row)" >&2
+    [ "$failures" -ge 5 ] && { echo "pr-watch: 5 polls in a row failed; check gh auth and network" >&2; exit 4; }
+  fi
+  first=0
+  polls=$((polls + 1))
+  [ -n "${PR_WATCH_MAX_POLLS:-}" ] && [ "$polls" -ge "$PR_WATCH_MAX_POLLS" ] && exit 3
+  sleep "$interval" & sleeper=$!
+  wait "$sleeper"   # interruptible, so a stop takes effect at once
+  sleeper=""
+done

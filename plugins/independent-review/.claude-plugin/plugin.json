@@ -1,0 +1,5 @@
+{
+  "name": "independent-review",
+  "version": "0.3.1",
+  "description": "Independent, fresh-context review of a PR, branch, design, analysis or document: pinned version, read-only reviewers, every finding validated, coverage recorded, delta re-review until clean."
+}
