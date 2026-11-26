@@ -8,7 +8,7 @@ Personal plugin marketplace for custom Claude Code skills and MCP plugins.
 |---|---|---|
 | `triage` | `/triage` | Iteratively process a list of items one by one — PR review comments, code review findings, analysis results, or any batch of decisions |
 | `analysis` | `/analysis` | Pick up one backlog item with a decision-ready analysis: validated problem, cited evidence, a recommendation with alternatives, an independent review and every open decision listed. Never implements |
-| `pr-workflow` | `pr-workflow:pr-author`, `pr-workflow:pr-intake` | Rules for agents working on pull requests (author habits and grants, maintainer intake), configured per repo, with a reminder hook |
+| `pr-workflow` | `pr-workflow:pr-author`, `pr-workflow:pr-intake` | Rules for agents working on issues and pull requests (author role, maintainer intake, one actor per step), configured per repo, with a reminder hook |
 | `independent-review` | `/independent-review` | Independent, fresh-context review of a PR, branch, design or document, with a pinned version, validated findings, a coverage record and delta re-review |
 
 `wrap` was removed on 2026-10-02: it ships with [consigliere](https://github.com/mnemcik/consigliere) (`cg init` installs it, `cg sync` keeps it current).

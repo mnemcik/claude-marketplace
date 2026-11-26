@@ -43,15 +43,17 @@ Whatever is posted under the owner's account on a PR or issue counts as the owne
 
 ## Issues
 
-Triage new issues (step 1): set type, priority and size, remove `needs-triage`, and bring the owner the triage in one table to approve. Never start implementation work on an issue: that is an author's.
+Triage new issues (step 1): propose type, priority and size for each in one table and wait for the owner's approval (`needs-owner` on each); once approved, set the fields and remove `needs-triage`. Never start implementation work on an issue: that is an author's.
+
+`pr-watch` watches PRs only. On every wake, and at the start of a session, also list the open issues in the intake repos that carry `needs-triage` or `needs-owner` (`gh issue list -R <repo> --label <label>`) and handle new ones and the owner's answers.
 
 ## Order of work for each PR
 
 1. **Impact analysis first**: does the change fit the repo's purpose and design, what does it change for the repo's users, what does it overlap with among open PRs, and **does it match the agreement on its issue** (`Fixes #NNN`; the spec and plan at the head match what was agreed, where the repo records them). If it matches, post the analysis as information and carry on without asking. **Ask the owner only when** the PR differs from or goes beyond the agreement, has no agreed issue (outside work), or is a release PR. Intake comments to the author need no per-comment go-ahead.
-2. **The maintainer's own correctness review, on every PR**, whoever the author is, with the `independent-review` plugin, on the head the author last marked ready (the opening head, or the head named in the latest *"head `<sha>` ready"* comment). Tests run in a container, **never on the host**. Repeat on the changes after each substantive push, until a round has no blocker and no should-fix. Findings go to the author as review comments; judge each outcome reply. *Why: an author's own review is a claim the maintainer can't check from outside.*
+2. **The maintainer's own correctness review, on every PR**, whoever the author is, with the `independent-review` plugin, on the head the author last marked ready (the opening head, or the head named in the latest *"head `<sha>` ready"* comment). An author who doesn't use that line (an outside contributor) has handed back when every thread from the round has a reply and a push follows; if it stays unclear, ask once on the PR. Tests run in a container, **never on the host**. Repeat on the changes after each substantive push, until a round has no blocker and no should-fix. Findings go to the author as review comments; judge each outcome reply. *Why: an author's own review is a claim the maintainer can't check from outside.*
 3. **CodeRabbit reviews are the intake's to request** (`@coderabbitai review`), alongside step 2, when the PR is worth the shared allowance: core code, security-relevant changes, larger diffs, outside contributors' PRs. Docs-only and small mechanical changes skip it; the intake's own review covers them.
 4. **The gate status** `${user_config.gate_status}` (if this is empty, the repo has no gate status and this step is skipped) goes on a head only when the agreement covers it. Set it without asking only when the new head:
-   - (a) implements what the agreement or the owner decided; or
+   - (a) implements the agreement, or makes changes the intake or the owner requested; or
    - (b) only updates from the default branch (a merge whose first parent is the agreed head, the PR's own diff unchanged), and a read of what landed since shows nothing that interacts with it; or
    - (c) adds author changes nobody asked for that stay within the PR's topic and widen nothing (no new behaviour beyond the feature, no new files or areas, no relaxed rule). Name each (c) change to the owner.
 
@@ -64,14 +66,14 @@ Whenever the intake needs the owner's decision on an issue or PR, set the `needs
 
 ## Ready, approval and merge
 
-A PR is **ready** when all of these hold: the agreement covers the current head (or the owner agreed at it); the maintainer's correctness review is clean at that head; the author marked that head ready (or it is a bot PR); CI is green; the branch is up to date; no review thread is open; the required approval is in.
+A PR is **ready** when all of these hold: the agreement covers the current head (or the owner agreed at it); the maintainer's correctness review is clean at that head; the author marked that head ready (or it is a bot PR); the gate status is on that head (where configured); CI is green; the branch is up to date; no review thread is open; the required approval is in.
 
-- **The approval is the intake's alone**: once its review is clean at the head and the required CI is green, post `@coderabbitai approve` (unless CodeRabbit's own approval is already on that head). Never on a head whose CI is failing.
+- **The approval is the intake's alone**, as part of the merge step: once its review is clean at the head, the gate status is set (where configured) and every check branch protection requires is green, post `@coderabbitai approve` (unless CodeRabbit's own approval is already on that head). Never on a head whose CI is failing.
 - `standing_merge` is `${user_config.standing_merge}`. If `true`, it is the owner's standing authorisation: merge a ready PR without asking. Otherwise ask the owner for each merge.
 - **Before every merge**, check that the head is the one the gate status was set on and that nothing merged since needs a recheck; if either fails, check the new commits first. Merge as a squash pinned to the checked head (`gh pr merge --squash --match-head-commit <sha>`).
 - **While a PR is in its final cycle** (approved, waiting for CI), hold merges that would put it behind.
-- **Release PRs**: propose a release when there is a reason, with that reason. Only on the owner's explicit **"merge it"** for that PR, approve and merge it pinned to the checked head. Never under the standing merge.
-- Bot PRs (`${user_config.bot_logins}`): ready when CI is green, approved and up to date; the maintainer side may give them a clean update from the default branch.
+- **Release PRs**: propose a release when there is a reason, with that reason. Only on the owner's explicit **"merge it"** for that PR, approve and merge it pinned to the checked head; the "merge it" also covers its gate status where the repo doesn't set it automatically. Never under the standing merge, even when a bot opened it.
+- **Other bot PRs** (`${user_config.bot_logins}`, release PRs excepted): no agreement or owner decision needed; ready when CI is green, the gate status is set (often by the repo's own workflow), approved and up to date. The maintainer side may give them a clean update from the default branch.
 - **After a merge, re-check the open PRs that overlap it** (files or topic) and comment on any it now contradicts or makes redundant.
 - **End every message to the owner with a status block**: per PR, its state, what the intake does next, what it waits for and from whom, and the `needs-owner` items.
 
