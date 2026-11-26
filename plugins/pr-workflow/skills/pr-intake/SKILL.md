@@ -88,7 +88,7 @@ The intake runs as **one long-running session** that watches all intake repos. O
 3. **Mark the change handled, then start the watcher again**:
    `pr-watch --state-dir "${CLAUDE_PLUGIN_DATA}/watch" --handled "${user_config.intake_repos}"`
    This saves the snapshot that was reported, not a fresh one, so anything that changed while you were handling it is reported on the next start. If you restart without `--handled`, the same change is reported again; nothing is lost either way.
-4. **Exit 3** means no PR changed in 30 polls (about an hour): do the issue sweep (above) and the silent-author check, then start it again (no `--handled` needed).
+4. **Exit 3** means no change was seen in 30 polls (about an hour at the default interval): do the issue sweep (above) and the silent-author check, then start it again (no `--handled` needed).
 5. **Exit 4** means five polls in a row failed (gh auth or network): check `gh auth status`, tell the user, and start it again once it works.
 
 On every wake, also check the silent-author clock (below) for PRs waiting on an author.
