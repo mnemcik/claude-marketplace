@@ -185,6 +185,12 @@ Motivation: wrap 1.0.3, 1.0.4, and 1.0.5 each shipped with at least one of the t
 
 ## pr-workflow
 
+### 0.3.0 — 2026-11-26 — one flow, one actor per step
+
+- **Changed (breaking):** the author never requests CodeRabbit reviews, posts `@coderabbitai approve`, asks for an approval, sets the gate status or merges; the approval moves to `pr-intake`, after the intake's own clean review and green required CI (closes #15). The author's independent review is no longer recorded in the PR description, and "mark ready on the user's request" is gone: PRs are never drafts and open only when the work is done.
+- **Added to `pr-author`:** start from an agreed issue; what counts as an agreement or spec amendment; spec gaps go to the owner; who starts the independent review; everything said on the PR, with outcome replies (closes #7); the *"head `<sha>` ready"* hand-back after each fix round; a status block.
+- **Added to `pr-intake`:** the 15-step flow with one actor per step; issue triage (closes #1); the impact analysis checks the PR against its issue's agreement and asks the owner only on a deviation, no agreement or a release; what counts as the owner's word; CodeRabbit review allocation; the `needs-owner` label; the approval; release PRs (the owner says "merge it", the intake approves and merges); holding merges during a PR's final cycle; a status block.
+
 ### 0.2.1 — 2026-11-21 — public-release clean-up
 
 - **Changed:** neutral SSH alias in the hook test; CodeRabbit review-trigger note no longer states an unsourced threshold.

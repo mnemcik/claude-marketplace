@@ -27,8 +27,8 @@
     {
       "name": "pr-workflow",
       "source": "./plugins/pr-workflow",
-      "description": "Rules for agents working on pull requests: habits for any PR the session opens, author grants in configured repos, maintainer-side intake in configured repos, and a hook that names the rules before the first gh call to a configured repo.",
-      "version": "0.2.1"
+      "description": "Rules for agents working on issues and pull requests: habits for any PR the session opens, the author role and the maintainer-side intake in configured repos, and a hook that names the rules before the first gh call to a configured repo.",
+      "version": "0.3.0"
     }
   ]
 }
