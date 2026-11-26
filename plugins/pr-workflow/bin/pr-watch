@@ -19,8 +19,10 @@
 #
 # Exit codes: 0 change reported / handled saved; 1 usage or state error,
 # or another watcher already running;
-# 3 PR_WATCH_MAX_POLLS reached without a change (tests only);
+# 3 PR_WATCH_MAX_POLLS reached without a change (the intake uses it as an
+#   idle timeout for its issue sweep; tests use it too);
 # 4 five polls in a row failed (gh auth or network): the session should look.
+# PR_WATCH_TEST=1 (tests only) lifts the 10-second interval floor.
 
 set -u
 export LC_ALL=C
@@ -37,7 +39,7 @@ while [ $# -gt 0 ]; do
   esac
 done
 case "$interval" in ''|*[!0-9]*) echo "pr-watch: --interval needs seconds" >&2; exit 1 ;; esac
-if [ -z "${PR_WATCH_MAX_POLLS:-}" ] && [ "$interval" -lt 10 ]; then
+if [ -z "${PR_WATCH_TEST:-}" ] && [ "$interval" -lt 10 ]; then
   echo "pr-watch: --interval must be at least 10 seconds (GitHub rate limit)" >&2; exit 1
 fi
 [ -n "$repos" ] && [ -n "$state_dir" ] || { echo "usage: pr-watch [--interval S] [--state-dir DIR] [--handled] owner/repo[,owner/repo…]" >&2; exit 1; }

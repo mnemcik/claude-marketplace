@@ -1,7 +1,7 @@
 {
   "name": "pr-workflow",
-  "version": "0.2.1",
-  "description": "Rules for agents working on pull requests: habits for any PR the session opens, author grants in configured repos, and the maintainer-side intake in configured repos. A hook names the rules before the first gh call to a configured repo.",
+  "version": "0.3.0",
+  "description": "Rules for agents working on issues and pull requests: habits for any PR the session opens, the author role and the maintainer-side intake in configured repos, and a hook that names the rules before the first gh call to a configured repo.",
   "author": {
     "name": "Matus Nemcik"
   },
@@ -12,7 +12,7 @@
     "author_repos": {
       "type": "string",
       "title": "Author repos",
-      "description": "Comma-separated owner/repo list where the author grants apply (approve without asking, update from the default branch without asking, the required review loop).",
+      "description": "Comma-separated owner/repo list where the author rules apply (start from an agreed issue, open only when done, hand each head back on the PR, update from the default branch without asking; never review requests, approvals, gate or merge).",
       "default": ""
     },
     "intake_repos": {
@@ -24,13 +24,13 @@
     "gate_status": {
       "type": "string",
       "title": "Gate status",
-      "description": "Name of the commit status the intake sets on a head the owner agreed to (empty: no gate status).",
+      "description": "Name of the commit status the intake sets on a head the issue's agreement covers (empty: no gate status).",
       "default": ""
     },
     "standing_merge": {
       "type": "boolean",
       "title": "Standing merge",
-      "description": "Whether the intake merges a ready PR without asking. Release PRs always need an explicit go-ahead.",
+      "description": "Whether the intake merges a ready PR without asking: the owner's standing authorisation. Release PRs always need the owner's explicit \"merge it\".",
       "default": false
     },
     "bot_logins": {

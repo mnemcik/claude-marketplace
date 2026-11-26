@@ -24,7 +24,7 @@ grep -q '^FAIL$' "$f" && exit 1
 cat "$f"
 EOF
 chmod +x "$tmp/bin/gh"
-export PATH="$tmp/bin:$PATH" FIX="$tmp/fix" PR_WATCH_MAX_POLLS=1
+export PATH="$tmp/bin:$PATH" FIX="$tmp/fix" PR_WATCH_MAX_POLLS=1 PR_WATCH_TEST=1
 state="$tmp/state"
 w() { "$BASH" "$watch" --interval 0 --state-dir "$state" "$@"; }
 
@@ -93,8 +93,10 @@ out=$(timeout 5 "$BASH" "$watch" o/a --interval 2>&1); rc=$?
 check "option without its value is a usage error"  1 $rc "$out"
 out=$("$BASH" "$watch" --help 2>&1); rc=$?
 check "help lists exit 4"                           0 $rc "$out" "five polls in a row failed"
-out=$(PR_WATCH_MAX_POLLS='' "$BASH" "$watch" --interval 0 --state-dir "$state" o/a 2>&1); rc=$?
+out=$(PR_WATCH_TEST='' PR_WATCH_MAX_POLLS='' "$BASH" "$watch" --interval 0 --state-dir "$state" o/a 2>&1); rc=$?
 check "interval below 10 s refused outside tests"  1 $rc "$out" "at least 10"
+out=$(PR_WATCH_TEST='' PR_WATCH_MAX_POLLS=30 "$BASH" "$watch" --interval 0 --state-dir "$state" o/a 2>&1); rc=$?
+check "idle limit doesn't lift the 10 s floor"     1 $rc "$out" "at least 10"
 PR_WATCH_MAX_POLLS=99 "$BASH" "$watch" --interval 30 --state-dir "$state" o/a,o/b >/dev/null 2>&1 & spid=$!
 sleep 1
 out=$(w o/a,o/b 2>&1); rc=$?

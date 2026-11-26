@@ -41,6 +41,7 @@ The `CHANGELOG.md` convention line (the "if it's not worth a changelog line…" 
 - **Patch** (`1.0.X`): bug fix, doc-only change to `SKILL.md`, rename that doesn't alter behaviour.
 - **Minor** (`1.X.0`): new phase, new capability, additional trigger, behaviour added without removing old behaviour.
 - **Major** (`X.0.0`): breaking change — phases renumbered in a way that changes observable output, removed behaviour, incompatible config.
+- **Below `1.0.0`**, a breaking change bumps the minor (`0.X.0`), as SemVer allows; the changelog marks it "(breaking)".
 
 ### Top-level `marketplace.json` `version` field
 
