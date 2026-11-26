@@ -30,8 +30,8 @@ Every state of an item has exactly one actor; every hand-over is visible on the 
 | 9 | Correctness review (and a CodeRabbit review when worth it) | intake | review comments, or clean |
 | 10 | Answer every comment, fix, keep the branch up to date | author | replies, fix commits, *"head `<sha>` ready"* |
 | 11 | A requested change touches the spec | author drafts, owner agrees (back to 5) | new agreement comment |
-| 12 | `@coderabbitai approve` | intake only | approval on the head |
-| 13 | Gate status on the final head | intake, under the agreement | status `success` |
+| 12 | Gate status on the final head | intake, under the agreement | status `success` |
+| 13 | `@coderabbitai approve`, once the gate is set and required checks are green | intake only | approval on the head |
 | 14 | Merge | intake (standing merge, or the owner's go) | merged |
 | 15 | Release PR | owner says "merge it"; intake approves and merges | release published |
 
@@ -45,7 +45,7 @@ Whatever is posted under the owner's account on a PR or issue counts as the owne
 
 Triage new issues (step 1): propose type, priority and size for each in one table and wait for the owner's approval (`needs-owner` on each); once approved, set the fields and remove `needs-triage`. Never start implementation work on an issue: that is an author's.
 
-`pr-watch` watches PRs only. On every wake, and at the start of a session, also list the open issues in the intake repos that carry `needs-triage` or `needs-owner` (`gh issue list -R <repo> --label <label>`) and handle new ones and the owner's answers.
+`pr-watch` watches PRs only. On every wake (exit 0 or 3, below), and at the start of a session, also list the open issues in the intake repos that carry `needs-triage` or `needs-owner` (`gh issue list -R <repo> --label <label>`) and handle new ones and the owner's answers.
 
 ## Order of work for each PR
 
@@ -71,7 +71,7 @@ A PR is **ready** when all of these hold: the agreement covers the current head 
 - **The approval is the intake's alone**, as part of the merge step: once its review is clean at the head, the gate status is set (where configured) and every check branch protection requires is green, post `@coderabbitai approve` (unless CodeRabbit's own approval is already on that head). Never on a head whose CI is failing.
 - `standing_merge` is `${user_config.standing_merge}`. If `true`, it is the owner's standing authorisation: merge a ready PR without asking. Otherwise ask the owner for each merge.
 - **Before every merge**, check that the head is the one the gate status was set on and that nothing merged since needs a recheck; if either fails, check the new commits first. Merge as a squash pinned to the checked head (`gh pr merge --squash --match-head-commit <sha>`).
-- **While a PR is in its final cycle** (approved, waiting for CI), hold merges that would put it behind.
+- **While a PR is in its final cycle** (gated, waiting for its required checks or about to merge), hold merges that would put it behind.
 - **Release PRs**: propose a release when there is a reason, with that reason. Only on the owner's explicit **"merge it"** for that PR, approve and merge it pinned to the checked head; the "merge it" also covers its gate status where the repo doesn't set it automatically. Never under the standing merge, even when a bot opened it.
 - **Other bot PRs** (`${user_config.bot_logins}`, release PRs excepted): no agreement or owner decision needed; ready when CI is green, the gate status is set (often by the repo's own workflow), approved and up to date. The maintainer side may give them a clean update from the default branch.
 - **After a merge, re-check the open PRs that overlap it** (files or topic) and comment on any it now contradicts or makes redundant.
@@ -82,13 +82,14 @@ A PR is **ready** when all of these hold: the agreement covers the current head 
 The intake runs as **one long-running session** that watches all intake repos. Only one session watches at a time; `pr-watch` refuses to start a second watcher for the same repos, but the time between a wake and `--handled` is covered only by keeping to one session.
 
 1. **Start the watcher in the background** (Bash with `run_in_background`):
-   `pr-watch --state-dir "${CLAUDE_PLUGIN_DATA}/watch" "${user_config.intake_repos}"`
+   `PR_WATCH_MAX_POLLS=30 pr-watch --state-dir "${CLAUDE_PLUGIN_DATA}/watch" "${user_config.intake_repos}"`
    It polls every 2 minutes and exits on the first difference from the last **handled** snapshot, printing what changed. Changes made while no session was watching are reported on the first poll.
 2. **When it exits 0, handle every changed PR** with the rules above: a new PR gets the impact analysis; a new head means judging the whole PR again; CI finishing or an approval may make a PR ready; a PR that merged or closed means re-checking the open PRs that overlap it. Changes the intake made itself (its comments, statuses, merges) also wake it; they need no action.
 3. **Mark the change handled, then start the watcher again**:
    `pr-watch --state-dir "${CLAUDE_PLUGIN_DATA}/watch" --handled "${user_config.intake_repos}"`
    This saves the snapshot that was reported, not a fresh one, so anything that changed while you were handling it is reported on the next start. If you restart without `--handled`, the same change is reported again; nothing is lost either way.
-4. **Exit 4** means five polls in a row failed (gh auth or network): check `gh auth status`, tell the user, and start it again once it works.
+4. **Exit 3** means no PR changed in 30 polls (about an hour): do the issue sweep (above) and the silent-author check, then start it again (no `--handled` needed).
+5. **Exit 4** means five polls in a row failed (gh auth or network): check `gh auth status`, tell the user, and start it again once it works.
 
 On every wake, also check the silent-author clock (below) for PRs waiting on an author.
 

@@ -27,7 +27,7 @@ pr-watch [--interval SECONDS] [--state-dir DIR] owner/repo[,owner/repo…]   # w
 pr-watch [--state-dir DIR] --handled owner/repo[,owner/repo…]              # mark the reported change handled
 ```
 
-Exit 4 means five polls in a row failed. Only one watcher per repo set runs at a time, and the interval is at least 10 seconds. Requires `gh` and `jq`; reads up to 100 open PRs per repo.
+With `PR_WATCH_MAX_POLLS=N` set, it exits 3 after N polls without a change; the intake uses that as an idle timeout to sweep issues, which `pr-watch` doesn't watch. Exit 4 means five polls in a row failed. Only one watcher per repo set runs at a time, and the interval is at least 10 seconds. Requires `gh` and `jq`; reads up to 100 open PRs per repo.
 
 Because of `bin/`, claude.ai and Cowork don't install this plugin; it is for Claude Code.
 

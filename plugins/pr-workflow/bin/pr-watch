@@ -19,7 +19,8 @@
 #
 # Exit codes: 0 change reported / handled saved; 1 usage or state error,
 # or another watcher already running;
-# 3 PR_WATCH_MAX_POLLS reached without a change (tests only);
+# 3 PR_WATCH_MAX_POLLS reached without a change (the intake uses it as an
+#   idle timeout for its issue sweep; tests use it too);
 # 4 five polls in a row failed (gh auth or network): the session should look.
 
 set -u
